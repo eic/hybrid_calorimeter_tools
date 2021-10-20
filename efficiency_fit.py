@@ -14,28 +14,31 @@
 
 
 #%matplotlib inline
-import uproot4
-#from ROOT import TH1F
-from hist import Hist
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.collections import PatchCollection
-from matplotlib import cm
-from matplotlib.colors import LogNorm, Normalize
-from uncertainties import unumpy as unp
-import numpy as np
-import awkward1 as ak
 from scipy.optimize import curve_fit
-from scipy.stats import crystalball
-from scipy.special import erf
-from zfit.models.physics import crystalball_func
-import math
+import numpy as np
+import uproot4
+
+###### CURRENTLY UNUSED IMPORTS
+import matplotlib.patches as patches ### UNUSED
+from matplotlib.collections import PatchCollection ### UNUSED
+from matplotlib import cm ### UNUSED
+from matplotlib.colors import LogNorm, Normalize ### UNUSED
+
+from scipy.stats import crystalball ### UNUSED
+from scipy.special import erf ### UNUSED
+
+import awkward1 as ak ### UNUSED
+from zfit.models.physics import crystalball_func ### UNUSED
+from hist import Hist ### UNUSED
+from uncertainties import unumpy as unp ### UNUSED
+import math ### UNUSEDs.physics import crystalball_func
 
 
+# Formatting plots
 mpl.rcParams['text.usetex'] = True
 plt.rc('text', usetex=False)
-
 
 ######################################################################################################################################
 # -------------- Functions
