@@ -1,3 +1,18 @@
+'''
+    efficiency_fit.py
+
+    Functions for hybrid calorimeter analysis on the EIC.
+
+    Authors:    Nathan Branson, Dmitry Romanov
+    Updated:    10/20/2021
+'''
+
+# TODO Need to change when it plots.  Currently plotting in build_eff_plots.
+# TODO open_files should be done by the user because their files will be different obviously. I put opening the files in main for that reason.
+# TODO "... = check_calibration(input_data??)" and "axes = plot_fit_results([(ind_fit_result, ind_plot_axes)], ax=ax)" need to be done 
+#       if that is still in the plan.
+
+
 #%matplotlib inline
 import uproot4
 #from ROOT import TH1F
@@ -49,7 +64,6 @@ def find_nearest(array,value):
     return idx
 ######################################################################################################################################
 ######################################################################################################################################
-######################################################################################################################################
 
 
 ######################################################################################################################################
@@ -59,7 +73,7 @@ def find_nearest(array,value):
 #           mean                            - mean result (reconstructed energy) from fitted line
 #           std                             - standard dev of fitted line
 ######################################################################################################################################
-def fit_crystal_ball(true_energy, histogram, localized = False):
+def fit_crystal_ball(true_energy, histogram):
     ### reduce x range to where energy is
     bin_centers = histogram[1][:-1] + np.diff(histogram[1]) / 2
     energy = np.argmax(histogram[0])
@@ -72,18 +86,12 @@ def fit_crystal_ball(true_energy, histogram, localized = False):
     fig, ax = plt.subplots()
     ### plot histogram
     width = .85*(histogram[1][1] - histogram[1][0])
-    if localized:
-        plt.bar(histogram[1][arg_min:arg_max], histogram[0][arg_min:arg_max], align='edge', width=width)
-    else:
-        plt.bar(histogram[1][arg_min:arg_max], histogram[0][arg_min:arg_max], align='edge', width=width)
+    plt.bar(histogram[1][0:500], histogram[0], align='edge', width=width)
 
     ### plot fit
     beta, m, scale = true_energy, 3, .4
     x_interval_for_fit = np.linspace(histogram[1][arg_min], histogram[1][arg_max], 10000)
-    if localized:
-        popt, _ = curve_fit(crystalball, bin_centers[arg_min:arg_max], histogram[0][arg_min:arg_max], p0=[1, 1, histogram[1][energy], .05, max(histogram[0])]) # alpha, n, mean, sigma, amp
-    else:
-        popt, _ = curve_fit(crystalball, bin_centers, histogram[0], p0=[1, 1, histogram[1][energy], .05, max(histogram[0])])
+    popt, _ = curve_fit(crystalball, bin_centers, histogram[0], p0=[1, 1, histogram[1][energy], .05, max(histogram[0])])
     reco_fit = crystalball(x_interval_for_fit, *popt) # *popt = alpha, n, mean, sigma, amp
     ax.plot(x_interval_for_fit, reco_fit, label='fit', color="orange")
     mean = popt[2]
@@ -108,7 +116,6 @@ def fit_crystal_ball(true_energy, histogram, localized = False):
 #           ind_fit_result  - [ind fit, axes] individual reconstructed fits and axes from the crystal ball fits
 ######################################################################################################################################
 def build_eff_plot(input_data, reco_fitter=fit_crystal_ball, eff_fitter=efficiency_fit):
-
     mean_list = []
     std_list = []
     true_energy_list = []
@@ -140,7 +147,7 @@ def build_eff_plot(input_data, reco_fitter=fit_crystal_ball, eff_fitter=efficien
 
     ind_fit_result = []
     for i in range(len(fit_result_list)):
-        ind_fit_result.append(fit_result_list[i], ax_list[i])
+        ind_fit_result.append([fit_result_list[i], ax_list[i]])
 
     return eff_fit, eff_axes, ind_fit_result
     
@@ -206,12 +213,14 @@ def graph_energy_plots(energies, mean_list, std_list, x_interval_for_fit, fit):
 
     return ax
 
-
+    
 ######################################################################################################################################
-# -------------- Opens Files with energies and locations
-# returns:  input_data      - data from files
+# -------------- Main
 ######################################################################################################################################
-def open_file(true_energies, locations):
+def main():
+    true_energies = [3,5,7,9]
+    locations = [40,40,40,40]
+    
     input_data = [] # [ (true_energy0, histogram_data0),
                     #   (true_energy1, histogram_data1),
                     #   (true_energy2, histogram_data2), ... ]
@@ -220,18 +229,7 @@ def open_file(true_energies, locations):
     for i in range(len(true_energies)):
         file = uproot4.open(f"../work/calib_gam_y{locations[i]}cm_{true_energies[i]}GeV_10000evt.ana.root")
         input_data.append([true_energies[i], file['ce_emcal_calib;1/reco_energy;1'].to_numpy()])
-
-    return input_data
-
-    
-######################################################################################################################################
-# -------------- Main
-######################################################################################################################################
-def main():
-    true_energies = [3,5,7,9]
-    locations = [40,40,40,40]
-
-    input_data = open_file(true_energies, locations)
+        
     eff_fit, eff_axes, ind_fit_result = build_eff_plot(input_data)
 
 if __name__ == "__main__":
