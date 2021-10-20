@@ -1,0 +1,7 @@
+uproot4
+awkward1
+hist[plot]
+matplotlib
+numpy
+scipy
+zfit
