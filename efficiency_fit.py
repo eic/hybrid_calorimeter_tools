@@ -3,14 +3,14 @@
 
     Functions for hybrid calorimeter analysis on the EIC.
 
+    CURRENTLY REQUIRES NUMPY ARRAYS
+
     Authors:    Nathan Branson, Dmitry Romanov
-    Updated:    10/20/2021
+    Updated:    10/29/2021
 '''
 
-# TODO Need to change when it plots.  Currently plotting in build_eff_plots.
-# TODO open_files should be done by the user because their files will be different obviously. I put opening the files in main for that reason.
 # TODO "... = check_calibration(input_data??)" and "axes = plot_fit_results([(ind_fit_result, ind_plot_axes)], ax=ax)" need to be done 
-#       if that is still in the plan.
+# TODO                if that is still in plan.
 
 
 #%matplotlib inline
@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import numpy as np
 import uproot4
+from hist import Hist
+import hist
 
 ###### CURRENTLY UNUSED IMPORTS
 import matplotlib.patches as patches ### UNUSED
@@ -31,9 +33,8 @@ from scipy.special import erf ### UNUSED
 
 import awkward1 as ak ### UNUSED
 from zfit.models.physics import crystalball_func ### UNUSED
-from hist import Hist ### UNUSED
 from uncertainties import unumpy as unp ### UNUSED
-import math ### UNUSEDs.physics import crystalball_func
+import math ### UNUSED
 
 
 # Formatting plots
@@ -56,9 +57,12 @@ def crystalball(x, alpha, n, mean, sigma, N):#N=amp
             func = np.append(func, [N*A*((np.float_power((B-(x-mean)/sigma),(-1*n))))])
     return func
 
+
+
 ### --- Y = c2/sqrt(E) + c1/E + c0
 def efficiency_fit(E, c0, c1, c2):
     return (c2/np.sqrt(E))+(c1/E)+c0
+
 
 
 ### --- https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array
@@ -70,38 +74,50 @@ def find_nearest(array,value):
 
 
 ######################################################################################################################################
-# -------------- Fits the energy plots to crystal ball function for energy reconstruction
+# fit_crystal_ball
+# Fits the energy plots to crystal ball function for energy reconstruction
 # returns:  [x_interval_for_fit, reco_fit]  - fitted line from crystal ball function
-#           ax                              - axes 
+#           ax                              - axes of individual reconstruction fit plots 
 #           mean                            - mean result (reconstructed energy) from fitted line
 #           std                             - standard dev of fitted line
 ######################################################################################################################################
 def fit_crystal_ball(true_energy, histogram):
-    ### reduce x range to where energy is
+    '''array = []
+    print(len(histogram))
+    for i in range(len(histogram[1])-1):
+        diff = histogram[1][i+1]-histogram[1][i]
+        array.append(diff)'''
+    ### get bin centers
     bin_centers = histogram[1][:-1] + np.diff(histogram[1]) / 2
+    #bin_centers = histogram[1][:-1] + array
+    for i in bin_centers:
+        i = i / 2
+
     energy = np.argmax(histogram[0])
     e_reco = histogram[1][energy]
     e_min = e_reco-3
     e_max = e_reco+1
+
+
     arg_min = find_nearest(histogram[1], e_min)#; arg_min = arg_min[0][0]
     arg_max = find_nearest(histogram[1], e_max)#; arg_max = arg_max[0][0]
 
     fig, ax = plt.subplots()
     ### plot histogram
     width = .85*(histogram[1][1] - histogram[1][0])
-    plt.bar(histogram[1][0:500], histogram[0], align='edge', width=width)
+    plt.bar(histogram[1][0:len(histogram[0]-1)], histogram[0], align='edge', width=width)
 
     ### plot fit
     beta, m, scale = true_energy, 3, .4
-    x_interval_for_fit = np.linspace(histogram[1][arg_min], histogram[1][arg_max], 10000)
+    x_interval_for_fit = np.linspace(histogram[1][0], histogram[1][len(histogram[0]-1)], 10000)
     popt, _ = curve_fit(crystalball, bin_centers, histogram[0], p0=[1, 1, histogram[1][energy], .05, max(histogram[0])])
     reco_fit = crystalball(x_interval_for_fit, *popt) # *popt = alpha, n, mean, sigma, amp
     ax.plot(x_interval_for_fit, reco_fit, label='fit', color="orange")
     mean = popt[2]
     std = popt[3]
-    # place a text box in upper left in axes coords
-    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    
     ### --- print mean and std on graph
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     textstr = '\n'.join((r'$\mu=%.4f$' % (round(mean,4), ), r'$\sigma=%.4f$' % (round(std, 4), )))
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
@@ -112,8 +128,11 @@ def fit_crystal_ball(true_energy, histogram):
     return [x_interval_for_fit, reco_fit], ax, mean, std
     ### [x axis, crystal ball fit], mean, standard deviation 
 
+
 ######################################################################################################################################
-# -------------- builds the energy plots
+# build_eff_plot
+# builds the efficiency plots
+# REQUIRES NUMPY ARRAY
 # returns:  eff_fit         - fit of the efficiency plot std/energy vs energy
 #           eff_axes        - axes of the efficiency plot
 #           ind_fit_result  - [ind fit, axes] individual reconstructed fits and axes from the crystal ball fits
@@ -131,12 +150,14 @@ def build_eff_plot(input_data, reco_fitter=fit_crystal_ball, eff_fitter=efficien
         std_list.append(std)
         ax_list.append(ax)
         true_energy_list.append(input_data[i][0])
+        
     
     ### mean/energy ratio
     mean_e_r = []
     ### std/energy ratio
     std_e_r = []
 
+    ### Gets percentages of energy ratios
     for i in range(len(mean_list)):
         mean_e_r.append(mean_list[i]/true_energy_list[i]*100)
         std_e_r.append((std_list[i]/true_energy_list[i])*100)
@@ -154,6 +175,7 @@ def build_eff_plot(input_data, reco_fitter=fit_crystal_ball, eff_fitter=efficien
 
     return eff_fit, eff_axes, ind_fit_result
     
+
 ######################################################################################################################################
 # -------------- Graphs the energy plots
 # returns:  ax          - axes of plots
@@ -211,29 +233,8 @@ def graph_energy_plots(energies, mean_list, std_list, x_interval_for_fit, fit):
     ax[1][1].set_xticks(range(math.floor(min(energies)), math.ceil(max(energies))+1))#, fontsize=35)
     #ax[1][1].set_yticks()#fontsize=35)
     ax[1][1].plot(x_interval_for_fit, fit, label='fit', color="orange")
-    plt.savefig(f"Fits_2/full",facecolor='w')
     #plt.clf()
 
+    #plt.savefig(f"Fits/full",facecolor='w')
+
     return ax
-
-    
-######################################################################################################################################
-# -------------- Main
-######################################################################################################################################
-def main():
-    true_energies = [3,5,7,9]
-    locations = [40,40,40,40]
-    
-    input_data = [] # [ (true_energy0, histogram_data0),
-                    #   (true_energy1, histogram_data1),
-                    #   (true_energy2, histogram_data2), ... ]
-                    ### Add hit location?
-
-    for i in range(len(true_energies)):
-        file = uproot4.open(f"../work/calib_gam_y{locations[i]}cm_{true_energies[i]}GeV_10000evt.ana.root")
-        input_data.append([true_energies[i], file['ce_emcal_calib;1/reco_energy;1'].to_numpy()])
-        
-    eff_fit, eff_axes, ind_fit_result = build_eff_plot(input_data)
-
-if __name__ == "__main__":
-    main()
