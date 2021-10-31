@@ -20,21 +20,6 @@ from scipy.optimize import curve_fit
 import numpy as np
 import uproot4
 
-###### CURRENTLY UNUSED IMPORTS
-import matplotlib.patches as patches ### UNUSED
-from matplotlib.collections import PatchCollection ### UNUSED
-from matplotlib import cm ### UNUSED
-from matplotlib.colors import LogNorm, Normalize ### UNUSED
-
-from scipy.stats import crystalball ### UNUSED
-from scipy.special import erf ### UNUSED
-
-import awkward1 as ak ### UNUSED
-from zfit.models.physics import crystalball_func ### UNUSED
-from hist import Hist ### UNUSED
-from uncertainties import unumpy as unp ### UNUSED
-import math ### UNUSEDs.physics import crystalball_func
-
 
 # Formatting plots
 mpl.rcParams['text.usetex'] = True
@@ -89,7 +74,7 @@ def fit_crystal_ball(true_energy, histogram):
     fig, ax = plt.subplots()
     ### plot histogram
     width = .85*(histogram[1][1] - histogram[1][0])
-    plt.bar(histogram[1][0:500], histogram[0], align='edge', width=width)
+    plt.bar(histogram[1][0:100], histogram[0][0:100], align='edge', width=width)
 
     ### plot fit
     beta, m, scale = true_energy, 3, .4
@@ -172,8 +157,8 @@ def graph_energy_plots(energies, mean_list, std_list, x_interval_for_fit, fit):
     ax[0][0].scatter(mean_list, energies)#, s=100)
     ax[0][0].set_ylabel("Reconstructed Energy (GeV)")#, fontsize=40)
     ax[0][0].set_xlabel("True Energy (GeV)")#, fontsize=40)
-    ax[0][0].set_yticks(range(math.floor(min(mean_list)), math.ceil(max(mean_list))+1))#, fontsize=35)
-    ax[0][0].set_xticks(range(math.floor(min(energies)), math.ceil(max(energies))+1))#, fontsize=35)
+    ax[0][0].set_yticks(range(np.floor(min(mean_list)), np.ceil(max(mean_list))+1))#, fontsize=35)
+    ax[0][0].set_xticks(range(np.floor(min(energies)), np.ceil(max(energies))+1))#, fontsize=35)
     #plt.savefig(f"Fits_2/y40cm_recovsreal",facecolor='w')
     #plt.clf()
 
